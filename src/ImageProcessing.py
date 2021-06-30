@@ -1,3 +1,4 @@
+import PIL
 import numpy as np
 from PIL import Image, ImageTk
 import matplotlib.image as mpl
@@ -6,6 +7,8 @@ import cv2 as cv
 from SlidingWindowObject import SlidingWindowObject
 
 class ImageProcessing():
+    def __init__(self) -> None:
+        pass
 
     def ConvertImageToGreyScale(self, filename):
         image =mpl.imread(filename)
@@ -68,7 +71,7 @@ class ImageProcessing():
             for j in range(imageW):
                 newint = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
                 grayImage[i][j] = newint
-                if grayImage[i][j]>195:
+                if grayImage[i][j]>123:
                     BinaryImage[i][j] = 0
                 else:
                     BinaryImage[i][j] = 255
@@ -235,37 +238,39 @@ class ImageProcessing():
             imageCopy = np.array(image)
             imageH = len(image)
             imageW = len(image[0])
-            BinaryImage = np.empty([imageH, imageW], dtype=np.uint8)
-            grayImage = np.empty([imageH, imageW], dtype=np.uint8)
-            for i in range(imageH):
-                for j in range(imageW):
-                    newint = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
-                    grayImage[i][j] = newint
-                    if grayImage[i][j]>195:
-                        BinaryImage[i][j] = 0
-                    else:
-                        BinaryImage[i][j] = 255
+            # BinaryImage = np.empty([imageH, imageW], dtype=np.uint8)
+            # grayImage = np.empty([imageH, imageW], dtype=np.uint8)
+            grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+            (threshold, BinaryImage) = cv.threshold(grayImage, 128, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+            # for i in range(imageH):
+            #     for j in range(imageW):
+            #         newint = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
+            #         grayImage[i][j] = newint
+            #         if grayImage[i][j]>195:
+            #             BinaryImage[i][j] = 0
+            #         else:
+            #             BinaryImage[i][j] = 255
             
             
-                threshold = 195
+                # threshold = 195
     
-                cvCanny = cv.Canny(BinaryImage, threshold, threshold * 2)   
-                
-                edges, _ = cv.findContours(cvCanny, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-                
-                
-                objectEdges = [None]*len(edges)
-                rect = [None]*len(edges)
+            cvCanny = cv.Canny(BinaryImage, threshold, threshold * 2)   
+            
+            edges, _ = cv.findContours(cvCanny, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+            
+            
+            objectEdges = [None]*len(edges)
+            rect = [None]*len(edges)
 
-                for i, c in enumerate(edges):
-                    objectEdges[i] = cv.approxPolyDP(c, 3, True)
-                    rect[i] = cv.boundingRect(objectEdges[i])
+            for i, c in enumerate(edges):
+                objectEdges[i] = cv.approxPolyDP(c, 3, True)
+                rect[i] = cv.boundingRect(objectEdges[i])
 
-                drawing = np.zeros((cvCanny.shape[0], cvCanny.shape[1], 3), dtype=np.uint8)
-                
-                for i in range(len(edges)):
-                    color = (255, 0, 0)
-                    cv.rectangle(drawing, (int(rect[i][0]), int(rect[i][1])), (int(rect[i][0]+rect[i][2]), int(rect[i][1]+rect[i][3])), color, 1)
+            drawing = np.zeros((cvCanny.shape[0], cvCanny.shape[1], 3), dtype=np.uint8)
+            
+            for i in range(len(edges)):
+                color = (255, 0, 0)
+                cv.rectangle(drawing, (int(rect[i][0]), int(rect[i][1])), (int(rect[i][0]+rect[i][2]), int(rect[i][1]+rect[i][3])), color, 1)
             
             for i in range(imageH):
                 for j in range(imageW):
