@@ -6,7 +6,6 @@ import PySimpleGUI as sg
 import os.path
 import numpy as np
 import ImageProcessing as imageProccess
-# from src import ImageProcessing as imageProccess
 import matplotlib.image as mpl
 import io
 
@@ -31,6 +30,9 @@ file_list_column = [
     ],
     [
         sg.Button(button_text = "Find Objects", key = "-FINDOBJECTSSLIDER-")
+    ],
+    [
+        sg.Button(button_text = "Canny", key = "-CANNY-")
     ],
      [
         sg.Button(button_text = "Find Objects Using CV2", key = "-FindObjectsLibraries-")
@@ -126,6 +128,16 @@ while True:
                 values["-FOLDER-"], values["-FILE LIST-"][0]
             )
             displayImage = imp.ExtractFeatures(filename)
+
+            window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        # except:
+        #     pass
+    elif event == "-CANNY-":
+        # try:
+            filename = os.path.join(
+                values["-FOLDER-"], values["-FILE LIST-"][0]
+            )
+            displayImage = imp.CannyEdges(filename)
 
             window["-CONVERTEDIMAGE-"].update(data=displayImage)
         # except:

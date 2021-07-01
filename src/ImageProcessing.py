@@ -5,6 +5,8 @@ import matplotlib.image as mpl
 import io
 import cv2 as cv
 from SlidingWindowObject import SlidingWindowObject
+import scipy
+from scipy.ndimage.filters import convolve
 
 class ImageProcessing():
     def __init__(self) -> None:
@@ -232,6 +234,109 @@ class ImageProcessing():
                 OriginalImage[c][x.Right][1] = 0
                 OriginalImage[c][x.Right][2] = 0
         return OriginalImage
+
+    def Gaussian(self, size, sigma):
+        trueSize = size//2
+        xAxis, yAxis = np.mgrid[-trueSize:trueSize+1, -trueSize:trueSize+1]
+        base = 1 / (2.0 * np.pi * sigma**2)
+        filtered = np.exp(-((xAxis**2 + yAxis**2) / (2.0*sigma**2))) * base
+        return filtered
+
+    def sobel(self, img):
+        Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+        Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+        
+        Ix = convolve(img, Kx)
+        Iy = convolve(img, Ky)
+        
+        magnitude = np.hypot(Ix, Iy)
+        magnitude = magnitude / magnitude.max() * 255
+        slope = np.arctan2(Iy, Ix)
+        
+        return (magnitude, slope)
+
+    def CannySupressionNonMax(self, image, direction):
+        
+        imageH = len(image)
+        imageW = len(image[0])
+        RImage = np.zeros((imageH,imageW), dtype=np.int32)
+        angle = direction * 180. / np.pi
+        angle[angle < 0] += 180
+
+        
+        for i in range(1,imageH-1):
+            for j in range(1,imageW-1):
+                try:
+                    q = 255
+                    r = 255
+                    
+                #angle 0
+                    if (0 <= angle[i,j] < 22.5) or (157.5 <= angle[i,j] <= 180):
+                        q = image[i, j+1]
+                        r = image[i, j-1]
+                    #angle 45
+                    elif (22.5 <= angle[i,j] < 67.5):
+                        q = image[i+1, j-1]
+                        r = image[i-1, j+1]
+                    #angle 90
+                    elif (67.5 <= angle[i,j] < 112.5):
+                        q = image[i+1, j]
+                        r = image[i-1, j]
+                    #angle 135
+                    elif (112.5 <= angle[i,j] < 157.5):
+                        q = image[i-1, j-1]
+                        r = image[i+1, j+1]
+
+                    if (image[i,j] >= q) and (image[i,j] >= r):
+                        RImage[i,j] = image[i,j]
+                    else:
+                        RImage[i,j] = 0
+
+                except IndexError as e:
+                    pass
+        
+        return RImage
+
+    def CannyThreshold(self, image, lowThresholdRatio=0.05, highThresholdRatio=0.09):
+    
+        highThreshold = image.max() * highThresholdRatio
+        lowThreshold = highThreshold * lowThresholdRatio
+        
+        imageH, imageW = image.shape
+        returnImage = np.zeros((imageH,imageW), dtype=np.int32)
+        
+        weak = np.int32(25)
+        strong = np.int32(255)
+        
+        strongX, stringY = np.where(image >= highThreshold)
+        
+        weakX, weakY = np.where((image <= highThreshold) & (image >= lowThreshold))
+        
+        returnImage[strongX, stringY] = strong
+        returnImage[weakX, weakY] = weak
+        
+        return (returnImage, weak, strong)
+
+    def CannyEdges(self,filename):
+        image =mpl.imread(filename)
+        imageH = len(image)
+        imageW = len(image[0])
+        grayImage = np.empty([imageH, imageW], dtype=np.uint8)
+        for i in range(imageH):
+            for j in range(imageW):
+                grayImage[i][j] = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
+
+        
+
+        smoothImage = convolve(grayImage, self.Gaussian(5, 1))
+        gradientImage, angel = self.sobel(smoothImage)
+        nonMaxImage = self.CannySupressionNonMax(gradientImage, angel)
+        threshImage = self.CannyThreshold(nonMaxImage)
+        imageArray = np.empty([imageH, imageW], dtype=np.uint8)
+        imageArray = np.asarray(threshImage[0])
+        displayImage = ImageTk.PhotoImage(Image.fromarray(imageArray))
+
+        return displayImage
     
     def FindBoxesUsingOpenCV(self, filename):
             image =mpl.imread(filename)
