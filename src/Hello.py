@@ -35,7 +35,16 @@ file_list_column = [
         sg.Button(button_text = "Canny", key = "-CANNY-")
     ],
      [
+        sg.Button(button_text = "HOG", key = "-HOG-")
+    ],
+     [
         sg.Button(button_text = "Find Objects Using CV2", key = "-FindObjectsLibraries-")
+    ],
+      [
+        sg.Button(button_text = "Train CNN", key = "-TrainCNN-")
+    ],
+      [
+        sg.Button(button_text = "Predict CNN", key = "-PredictCNN-")
     ],
 ]
 
@@ -148,6 +157,37 @@ while True:
                 values["-FOLDER-"], values["-FILE LIST-"][0]
             )
             displayImage = imp.FindBoxesUsingOpenCV(filename)
+
+            window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        # except:
+        #     pass
+    elif event == "-HOG-":
+        # try:
+            filename = os.path.join(
+                values["-FOLDER-"], values["-FILE LIST-"][0]
+            )
+            displayImage = imp.HOG(filename)
+
+            window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        # except:
+        #     pass
+    elif event == "-TrainCNN-":
+        # try:
+            filename = os.path.join(
+                values["-FOLDER-"], values["-FILE LIST-"][0]
+            )
+            # displayImage = imp.pwd(filename)
+            imp.trainCNN()
+
+            # window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        # except:
+        #     pass
+    elif event == "-PredictCNN-":
+        # try:
+            filename = os.path.join(
+                values["-FOLDER-"], values["-FILE LIST-"][0]
+            )
+            displayImage = imp.predictCNN(filename)
 
             window["-CONVERTEDIMAGE-"].update(data=displayImage)
         # except:

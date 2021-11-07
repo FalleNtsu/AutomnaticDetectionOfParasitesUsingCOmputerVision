@@ -4,9 +4,14 @@ from PIL import Image, ImageTk
 import matplotlib.image as mpl
 import io
 import cv2 as cv
+from numpy.lib.function_base import append
 from SlidingWindowObject import SlidingWindowObject
 import scipy
 from scipy.ndimage.filters import convolve
+import HOG
+from skimage.feature import hog
+import CNNTrain as cnnT
+import CNNPredict as cnnP
 
 class ImageProcessing():
     def __init__(self) -> None:
@@ -78,16 +83,17 @@ class ImageProcessing():
                 else:
                     BinaryImage[i][j] = 255
 # create the window
-        window = np.empty([8, 8])
+        window = np.empty([9, 9])
+        #3x3 as usualy in powers of 3
         objectArray = []
-        for i in range(0, imageH, 8):
+        for i in range(0, imageH, 9):
             nexti = i+8
-            for j in range(0, imageW, 8):
+            for j in range(0, imageW, 9):
                 if self.checkIfvaluesInObjectArray(objectArray,i,j):
                     nextj = j+8
                     if nextj < imageW and nexti < imageH:
-                        window = self.AddToWindow(BinaryImage,i,j,8)
-                        windowValue = self.WindowSum(window,8)
+                        window = self.AddToWindow(BinaryImage,i,j,9)
+                        windowValue = self.WindowSum(window,9)
                         
                         #check if there is a white value in the window
                         if windowValue>0:
@@ -101,7 +107,7 @@ class ImageProcessing():
                             right = 0
                             rightY=0
                             #calculate the height of the object
-                            top = self.GetopCellOfObjectFromWindow(window,i,j, 8)
+                            top = self.GetopCellOfObjectFromWindow(window,i,j, 9)
                             for y in range(top, imageH):
                                 if BinaryImage[y][j] == 255:
                                     for x in range(j,imageW):
@@ -233,6 +239,14 @@ class ImageProcessing():
                 OriginalImage[c][x.Right][0] = 255
                 OriginalImage[c][x.Right][1] = 0
                 OriginalImage[c][x.Right][2] = 0
+        
+                color = (0, 255, 0)
+                color1 = (0, 255, 255)
+                #cv.rectangle(OriginalImage, (int(x.Top), int(x.Left)), (int(x.Bottom), int(x.Right)), color1, 1)
+                #left top right bottom
+                cv.rectangle(OriginalImage, (int(x.Left), int(x.Top)), (int(x.Right), int(x.Bottom)), color1, 1)
+                #cv.rectangle(OriginalImage, (50, 50), (200, 100), color, 1)
+
         return OriginalImage
 
     def Gaussian(self, size, sigma):
@@ -242,12 +256,12 @@ class ImageProcessing():
         filtered = np.exp(-((xAxis**2 + yAxis**2) / (2.0*sigma**2))) * base
         return filtered
 
-    def sobel(self, img):
+    def sobel(self, image):
         Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
         Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
         
-        Ix = convolve(img, Kx)
-        Iy = convolve(img, Ky)
+        Ix = convolve(image, Kx)
+        Iy = convolve(image, Ky)
         
         magnitude = np.hypot(Ix, Iy)
         magnitude = magnitude / magnitude.max() * 255
@@ -264,40 +278,37 @@ class ImageProcessing():
         angle[angle < 0] += 180
 
         
-        for i in range(1,imageH-1):
-            for j in range(1,imageW-1):
-                try:
-                    q = 255
-                    r = 255
-                    
-                #angle 0
-                    if (0 <= angle[i,j] < 22.5) or (157.5 <= angle[i,j] <= 180):
-                        q = image[i, j+1]
-                        r = image[i, j-1]
-                    #angle 45
-                    elif (22.5 <= angle[i,j] < 67.5):
-                        q = image[i+1, j-1]
-                        r = image[i-1, j+1]
-                    #angle 90
-                    elif (67.5 <= angle[i,j] < 112.5):
-                        q = image[i+1, j]
-                        r = image[i-1, j]
-                    #angle 135
-                    elif (112.5 <= angle[i,j] < 157.5):
-                        q = image[i-1, j-1]
-                        r = image[i+1, j+1]
+        for h in range(1,imageH-1):
+            for w in range(1,imageW-1):
+  
+                q = 255
+                r = 255
+                
+            #angle 0
+                if (0 <= angle[h,w] < 22.5) or (157.5 <= angle[h,w] <= 180):
+                    q = image[h, w+1]
+                    r = image[h, w-1]
+                #angle 45
+                elif (22.5 <= angle[h,w] < 67.5):
+                    q = image[h+1, w-1]
+                    r = image[h-1, w+1]
+                #angle 90
+                elif (67.5 <= angle[h,w] < 112.5):
+                    q = image[h+1, w]
+                    r = image[h-1, w]
+                #angle 135
+                elif (112.5 <= angle[h,w] < 157.5):
+                    q = image[h-1, w-1]
+                    r = image[h+1, w+1]
 
-                    if (image[i,j] >= q) and (image[i,j] >= r):
-                        RImage[i,j] = image[i,j]
-                    else:
-                        RImage[i,j] = 0
-
-                except IndexError as e:
-                    pass
+                if (image[h,w] >= q) and (image[h,w] >= r):
+                    RImage[h,w] = image[h,w]
+                else:
+                    RImage[h,w] = 0
         
         return RImage
 
-    def CannyThreshold(self, image, lowThresholdRatio=0.05, highThresholdRatio=0.09):
+    def CannyThreshold(self, image, lowThresholdRatio=0.05, highThresholdRatio=0.15):
     
         highThreshold = image.max() * highThresholdRatio
         lowThreshold = highThreshold * lowThresholdRatio
@@ -305,7 +316,7 @@ class ImageProcessing():
         imageH, imageW = image.shape
         returnImage = np.zeros((imageH,imageW), dtype=np.int32)
         
-        weak = np.int32(25)
+        weak = np.int32(75)
         strong = np.int32(255)
         
         strongX, stringY = np.where(image >= highThreshold)
@@ -317,28 +328,47 @@ class ImageProcessing():
         
         return (returnImage, weak, strong)
 
+    def EdgeTacking(self, image, weak, strong=255):
+        imageH, imageW = image.shape
+        for h in range(1, imageH-1):
+            for w in range (1, imageW-1):
+                if(image[h,w] ==weak):
+                    try:
+                        if ((image[h+1, w-1] == strong) or (image[h+1, w] == strong) or (image[h+1, w+1] == strong)
+                            or (image[h, w-1] == strong) or (image[h, w+1] == strong)
+                            or (image[h-1, w-1] == strong) or (image[h-1, w] == strong) or (image[h-1, w+1] == strong)):
+                            image[h, w] = strong
+                    except IndexError as error:
+                        pass
+        return image
+
     def CannyEdges(self,filename):
         image =mpl.imread(filename)
         imageH = len(image)
         imageW = len(image[0])
         grayImage = np.empty([imageH, imageW], dtype=np.uint8)
+        BinaryImage = np.empty([imageH, imageW], dtype=np.uint8)
         for i in range(imageH):
             for j in range(imageW):
                 grayImage[i][j] = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
-
+                if grayImage[i][j]>195:
+                    BinaryImage[i][j] = 0
+                else:
+                    BinaryImage[i][j] = 255
         
 
-        smoothImage = convolve(grayImage, self.Gaussian(5, 1))
+        smoothImage = convolve(BinaryImage, self.Gaussian(5, 1))
         gradientImage, angel = self.sobel(smoothImage)
         nonMaxImage = self.CannySupressionNonMax(gradientImage, angel)
         threshImage = self.CannyThreshold(nonMaxImage)
+        cannyImage = self.EdgeTacking(threshImage[0],threshImage[1],threshImage[2])
         imageArray = np.empty([imageH, imageW], dtype=np.uint8)
-        imageArray = np.asarray(threshImage[0])
+        imageArray = np.asarray(cannyImage)
         displayImage = ImageTk.PhotoImage(Image.fromarray(imageArray))
 
         return displayImage
     
-    def FindBoxesUsingOpenCV(self, filename):
+    def FindBoxesUsingOpenCV(self, filename, returnImageType = 0):
             image =mpl.imread(filename)
             imageCopy = np.array(image)
             imageH = len(image)
@@ -346,7 +376,7 @@ class ImageProcessing():
             # BinaryImage = np.empty([imageH, imageW], dtype=np.uint8)
             # grayImage = np.empty([imageH, imageW], dtype=np.uint8)
             grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-            (threshold, BinaryImage) = cv.threshold(grayImage, 128, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+            (threshold, BinaryImage) = cv.threshold(grayImage, 150, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
             # for i in range(imageH):
             #     for j in range(imageW):
             #         newint = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
@@ -372,16 +402,43 @@ class ImageProcessing():
                 rect[i] = cv.boundingRect(objectEdges[i])
 
             drawing = np.zeros((cvCanny.shape[0], cvCanny.shape[1], 3), dtype=np.uint8)
-            
+            rectangles = []
             for i in range(len(edges)):
                 color = (255, 0, 0)
                 cv.rectangle(drawing, (int(rect[i][0]), int(rect[i][1])), (int(rect[i][0]+rect[i][2]), int(rect[i][1]+rect[i][3])), color, 1)
-            
+                rectangle = SlidingWindowObject(int(rect[i][1]),int(rect[i][1]+rect[i][3]),int(rect[i][0]),int(rect[i][0]+rect[i][2]))
+                rectangles.append(rectangle)
             for i in range(imageH):
                 for j in range(imageW):
                     if drawing[i][j][0]==255:
                         imageCopy[i][j]=drawing[i][j]
                     
-
-            displayImage = ImageTk.PhotoImage(Image.fromarray(imageCopy))
-            return displayImage
+            if returnImageType == 0:
+                displayImage = ImageTk.PhotoImage(Image.fromarray(imageCopy))
+                return displayImage
+            elif returnImageType ==1:
+                displayImage = ImageTk.PhotoImage(Image.fromarray(drawing))
+                return displayImage
+            else :
+                displayImage = ImageTk.PhotoImage(Image.fromarray(imageCopy))
+                return imageCopy,rectangles
+    
+    def HOG(self, filename):
+        image =mpl.imread(filename)
+        hogFeatures ,displayImasge = hog(image, visualize=True)
+        displayImage = ImageTk.PhotoImage(Image.fromarray(displayImasge))
+        return displayImage
+    
+    def trainCNN(self):
+        c=cnnT.CNNTrain()
+        c.TrainCNN()
+    
+    def predictCNN(self, filename):
+        c =cnnP.CNNPredict()
+        image,rectanlges = self.FindBoxesUsingOpenCV(filename,2)
+        displayImage = c.PredictCNN(image,rectanlges)
+        # image = mpl.imread("E:/honors Project/AutomnaticDetectionOfParasitesUsingCOmputerVision/Images/show\\tempsnip.png")
+        imageArray = np.array(displayImage)
+        displayImage = ImageTk.PhotoImage(Image.fromarray(imageArray))
+        return displayImage
+        # return "E:/honors Project/AutomnaticDetectionOfParasitesUsingCOmputerVision/Images/show\\tempsnip.png"
