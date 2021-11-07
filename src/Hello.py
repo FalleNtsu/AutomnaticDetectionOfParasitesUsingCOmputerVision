@@ -38,6 +38,9 @@ file_list_column = [
         sg.Button(button_text = "HOG", key = "-HOG-")
     ],
      [
+        sg.Button(button_text = "Pipeline 2 Boxes", key = "-PL2BB-")
+    ],
+     [
         sg.Button(button_text = "Find Objects Using CV2", key = "-FindObjectsLibraries-")
     ],
       [
@@ -188,6 +191,16 @@ while True:
                 values["-FOLDER-"], values["-FILE LIST-"][0]
             )
             displayImage = imp.predictCNN(filename)
+
+            window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        # except:
+        #     pass
+    elif event == "-PL2BB-":
+        # try:
+            filename = os.path.join(
+                values["-FOLDER-"], values["-FILE LIST-"][0]
+            )
+            displayImage = imp.HOGBoundingBoxes(filename)
 
             window["-CONVERTEDIMAGE-"].update(data=displayImage)
         # except:

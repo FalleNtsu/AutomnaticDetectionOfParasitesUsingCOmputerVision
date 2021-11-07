@@ -1,3 +1,4 @@
+import random
 import PIL
 import numpy as np
 from PIL import Image, ImageTk
@@ -68,6 +69,35 @@ class ImageProcessing():
 
         return displayImage
     
+    def ExtractFeatures2(self, filename):
+        image =mpl.imread(filename)
+        imageH = len(image)
+        imageW = len(image[0])
+        BinaryImage = np.empty([imageH, imageW], dtype=np.uint8)
+        grayImage = np.empty([imageH, imageW], dtype=np.uint8)
+        for i in range(imageH):
+            for j in range(imageW):
+                newint = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
+                grayImage[i][j] = newint
+                if grayImage[i][j]>123:
+                    BinaryImage[i][j] = 0
+                else:
+                    BinaryImage[i][j] = 255
+        window = np.empty([9, 9])
+        #3x3 as usualy in powers of 3
+        objectArray = []
+        for i in range(0, imageH, 9):
+            nexti = i+9
+            for j in range(0, imageW, 9):
+                if self.checkIfvaluesInObjectArray(objectArray,i,j):
+                    nextj = j+9
+                    if nextj < imageW and nexti < imageH:
+                        window = self.AddToWindow(BinaryImage,i,j,9)
+                        windowValue = self.WindowSum(window,9)
+                        if windowValue >0:
+                            simp = 0
+
+    
     def ExtractFeatures(self, filename):
         image =mpl.imread(filename)
         imageH = len(image)
@@ -87,10 +117,10 @@ class ImageProcessing():
         #3x3 as usualy in powers of 3
         objectArray = []
         for i in range(0, imageH, 9):
-            nexti = i+8
+            nexti = i+9
             for j in range(0, imageW, 9):
                 if self.checkIfvaluesInObjectArray(objectArray,i,j):
-                    nextj = j+8
+                    nextj = j+9
                     if nextj < imageW and nexti < imageH:
                         window = self.AddToWindow(BinaryImage,i,j,9)
                         windowValue = self.WindowSum(window,9)
@@ -206,7 +236,7 @@ class ImageProcessing():
         return True
 
     def GetopCellOfObjectFromWindow(self, window, i,j, windowSize):
-        top = -1
+        top = i
         if len(window)>0:
             for x in range(windowSize):
                 for y in range(windowSize):
@@ -405,6 +435,16 @@ class ImageProcessing():
             rectangles = []
             for i in range(len(edges)):
                 color = (255, 0, 0)
+                con = True
+                for r in rectangles:
+                      #left top right bottom
+                    if int(rect[i][0]) > r.Left and int(rect[i][1]) >r.Top and int(rect[i][0]+rect[i][2]) < r.Right and int(rect[i][1]+rect[i][3]) < r.Bottom:
+                        con = False
+                    area = (int(rect[i][0]+rect[i][2]) - int(rect[i][0])) * (int(rect[i][1]+rect[i][3]) - int(rect[i][1]))
+                    if area<120:
+                        con = False
+                if not con:
+                    continue
                 cv.rectangle(drawing, (int(rect[i][0]), int(rect[i][1])), (int(rect[i][0]+rect[i][2]), int(rect[i][1]+rect[i][3])), color, 1)
                 rectangle = SlidingWindowObject(int(rect[i][1]),int(rect[i][1]+rect[i][3]),int(rect[i][0]),int(rect[i][0]+rect[i][2]))
                 rectangles.append(rectangle)
@@ -442,3 +482,53 @@ class ImageProcessing():
         displayImage = ImageTk.PhotoImage(Image.fromarray(imageArray))
         return displayImage
         # return "E:/honors Project/AutomnaticDetectionOfParasitesUsingCOmputerVision/Images/show\\tempsnip.png"
+    
+    def HOGBoundingBoxes(self, filename):
+        image =mpl.imread(filename)
+        imageCopy = np.array(image)
+        imageH = len(image)
+        imageW = len(image[0])
+        # BinaryImage = np.empty([imageH, imageW], dtype=np.uint8)
+        # grayImage = np.empty([imageH, imageW], dtype=np.uint8)
+        grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        (threshold, BinaryImage) = cv.threshold(grayImage, 150, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+        # for i in range(imageH):
+        #     for j in range(imageW):
+        #         newint = int(image[i][j][0]*0.2126 + image[i][j][1]*0.7152 + image[i][j][2] * 0.0722)
+        #         grayImage[i][j] = newint
+        #         if grayImage[i][j]>195:
+        #             BinaryImage[i][j] = 0
+        #         else:
+        #             BinaryImage[i][j] = 255
+        
+        
+            # threshold = 195
+
+        cvCanny = cv.Canny(BinaryImage, threshold, threshold * 2)   
+        
+        edges, _ = cv.findContours(cvCanny, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        
+        
+        objectEdges = [None]*len(edges)
+        rect = [None]*len(edges)
+
+        for i, c in enumerate(edges):
+            objectEdges[i] = cv.approxPolyDP(c, 3, True)
+            rect[i] = cv.boundingRect(objectEdges[i])
+
+        drawing = np.zeros((cvCanny.shape[0], cvCanny.shape[1], 3), dtype=np.uint8)
+        rectangles = []
+        for i in range(len(edges)):
+            color = (255, 0, 0)
+            alt = random.randint(-5,5)
+            cv.rectangle(drawing, (int(rect[i][0]-alt), int(rect[i][1]-alt)), (int(rect[i][0]+rect[i][2]-alt), int(rect[i][1]+rect[i][3]-alt)), color, 1)
+            rectangle = SlidingWindowObject(int(rect[i][1]),int(rect[i][1]+rect[i][3]),int(rect[i][0]),int(rect[i][0]+rect[i][2]))
+            rectangles.append(rectangle)
+        for i in range(imageH):
+            for j in range(imageW):
+                if drawing[i][j][0]==255:
+                    imageCopy[i][j]=drawing[i][j]
+                
+       
+        displayImage = ImageTk.PhotoImage(Image.fromarray(imageCopy))
+        return displayImage
