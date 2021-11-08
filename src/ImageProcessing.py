@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 import matplotlib.image as mpl
 import io
 import cv2 as cv
+from numpy.core.records import array
 from numpy.lib.function_base import append
 from SlidingWindowObject import SlidingWindowObject
 import scipy
@@ -397,6 +398,17 @@ class ImageProcessing():
         displayImage = ImageTk.PhotoImage(Image.fromarray(imageArray))
 
         return displayImage
+    
+    def HOGBoundingboxes(self, filename):
+        image =mpl.imread(filename)
+        imageCopy = np.array(image)
+        imageH = len(image)
+        imageW = len(image[0])
+        hogFeatures ,displayImasge = hog(image, visualize=False)
+        for i in range (hogFeatures.array.length):
+            
+
+
     
     def FindBoxesUsingOpenCV(self, filename, returnImageType = 0):
             image =mpl.imread(filename)

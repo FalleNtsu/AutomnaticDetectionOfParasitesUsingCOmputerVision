@@ -4,6 +4,7 @@ from typing import IO
 from PIL import Image, ImageTk
 import PySimpleGUI as sg
 import os.path
+from cv2 import colorChange
 import numpy as np
 import ImageProcessing as imageProccess
 import matplotlib.image as mpl
@@ -23,10 +24,22 @@ file_list_column = [
         )
     ],
     [
+        sg.HorizontalSeparator("Black", key = "-Separator1-")
+    ],
+    [
+        sg.Text("Preprocessing", key = "-Text1-")
+    ],
+    [
         sg.Button(button_text = "Convert To GreyScale", key = "-GREYSCALE-")
     ],
     [
         sg.Button(button_text = "Convert To Binary", key = "-BINARYSCALE-")
+    ],
+    [
+        sg.HorizontalSeparator("Black", key = "-Separator2-")
+    ],
+    [
+        sg.Text("Pipeline 1:", key = "-Text2-")
     ],
     [
         sg.Button(button_text = "Find Objects", key = "-FINDOBJECTSSLIDER-")
@@ -34,11 +47,23 @@ file_list_column = [
     [
         sg.Button(button_text = "Canny", key = "-CANNY-")
     ],
+    [
+        sg.Text("Pipeline 2:", key = "-Text3-")
+    ],
+    [
+        sg.HorizontalSeparator("Black", key = "-Separator3-")
+    ],
      [
         sg.Button(button_text = "HOG", key = "-HOG-")
     ],
      [
         sg.Button(button_text = "Pipeline 2 Boxes", key = "-PL2BB-")
+    ],
+    [
+        sg.Text("Pipeline 3:", key = "-Text4-")
+    ],
+    [
+        sg.HorizontalSeparator("Black", key = "-Separator4-")
     ],
      [
         sg.Button(button_text = "Find Objects Using CV2", key = "-FindObjectsLibraries-")
@@ -49,6 +74,10 @@ file_list_column = [
       [
         sg.Button(button_text = "Predict CNN", key = "-PredictCNN-")
     ],
+      [
+        sg.Button(button_text = "Hide Demo", key = "-Hide-")
+    ],
+
 ]
 
 # For now will only show the name of the file that was chosen
@@ -203,6 +232,29 @@ while True:
             displayImage = imp.HOGBoundingBoxes(filename)
 
             window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        # except:
+        #     pass
+    elif event == "-Hide-":
+        # try:
+            # filename = os.path.join(
+            #     values["-FOLDER-"], values["-FILE LIST-"][0]
+            # )
+            # displayImage = imp.HOGBoundingBoxes(filename)
+
+            # window["-CONVERTEDIMAGE-"].update(data=displayImage)
+        window.Element("-PL2BB-").Update(visible = False)
+        window.Element("-FindObjectsLibraries-").Update(visible = False)
+        window.Element("-HOG-").Update(visible = False)
+        window.Element("-CANNY-").Update(visible = False)
+        window.Element("-FINDOBJECTSSLIDER-").Update(visible = False)
+        window.Element("-BINARYSCALE-").Update(visible = False)
+        window.Element("-GREYSCALE-").Update(visible = False)
+        window.Element("-Text1-").Update(visible = False)
+        window.Element("-Text2-").Update(visible = False)
+        window.Element("-Text3-").Update(visible = False)
+        window.Element("-Text4-").Update(visible = False)
+
+        
         # except:
         #     pass
 
