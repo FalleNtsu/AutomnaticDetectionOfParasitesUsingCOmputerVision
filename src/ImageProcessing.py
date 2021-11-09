@@ -1,3 +1,4 @@
+from inspect import TPFLAGS_IS_ABSTRACT
 import random
 import PIL
 import numpy as np
@@ -7,6 +8,7 @@ import io
 import cv2 as cv
 from numpy.core.records import array
 from numpy.lib.function_base import append
+from tensorflow.python.ops.gen_control_flow_ops import Switch
 from SlidingWindowObject import SlidingWindowObject
 import scipy
 from scipy.ndimage.filters import convolve
@@ -399,14 +401,8 @@ class ImageProcessing():
 
         return displayImage
     
-    def HOGBoundingboxes(self, filename):
-        image =mpl.imread(filename)
-        imageCopy = np.array(image)
-        imageH = len(image)
-        imageW = len(image[0])
-        hogFeatures ,displayImasge = hog(image, visualize=False)
-        for i in range (hogFeatures.array.length):
-            
+    
+        
 
 
     
@@ -494,6 +490,135 @@ class ImageProcessing():
         displayImage = ImageTk.PhotoImage(Image.fromarray(imageArray))
         return displayImage
         # return "E:/honors Project/AutomnaticDetectionOfParasitesUsingCOmputerVision/Images/show\\tempsnip.png"
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     def HOGBoundingBoxes(self, filename):
         image =mpl.imread(filename)

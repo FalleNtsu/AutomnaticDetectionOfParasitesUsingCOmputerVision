@@ -243,3 +243,149 @@ class SliddingWindow():
     'g': np.float64,      
     'G': np.complex128,   
     }
+
+
+    def HOGBoundingboxes(self, filename):
+        image =mpl.imread(filename)
+        imageCopy = np.array(image)
+        imageH = len(image)
+        imageW = len(image[0])
+        hogFeatures ,displayImasge = hog(image, visualize=True)
+        right, left, top, bottom = 0
+        objectArray = []
+        for r in range (0,imageW,9):
+            for c in range (0,imageW,9):
+                if r not in objectArray and c not in objectArray:
+                    if hogFeatures.array[r][c][0] > 0.55:
+                        top, left, bottom, right = self.hogFindObject(self, hogFeatures.array, r, c, imageH, imageW)
+                        box = SlidingWindowObject(top,bottom,left,right)
+                        objectArray.append(box)
+        for i in range(len(objectArray)):
+            color = (255, 0, 0)
+            
+            #left top right bottom
+            cv.rectangle(displayImasge, (int(objectArray.left), int(objectArray.top)), (int(objectArray.right), int(objectArray.bottom)), color, 1)
+            
+            for i in range(imageH):
+                for j in range(imageW):
+                    if displayImasge[i][j][0]==255:
+                        imageCopy[i][j]=displayImasge[i][j]
+        return imageCopy
+                   
+            
+    
+    def hogFindObject(self, array, row, col, imageH, imageW):
+        original = array[row][col][0]
+        current = 0.00
+        direction = ""
+        left, top = 0
+        right = imageW
+        bottom = imageH
+        
+        while original != current:
+            direction = self.HogCheckDirection(array,row,col,imageH,imageW)
+
+            if direction == "tpl":
+                current = array[row-9][col-9][0]
+                if top > row:
+                    top = row
+                if left > col:
+                    left =col
+                continue
+
+            if direction == "tp":
+                current = array[row-9][col][0]
+                if top > row:
+                    top = row
+                continue
+            if direction == "tpr":
+                current = array[row-9][col+9][0]
+                if top > row:
+                    top = row
+                if right < col:
+                    right =col
+                continue
+
+            if direction == "rt":
+                current = array[row][col+9][0]
+                if right < col:
+                    right =col
+                continue
+
+            if direction == "btr":
+                current = array[row+9][col+9][0]
+                if bottom < row:
+                    bottom = row
+                if right < col:
+                    right =col
+                continue
+
+            if direction == "btm":
+                current = array[row+9][col][0]
+                if bottom < row:
+                    bottom = row
+                continue
+
+            if direction == "btl":
+                current = array[row+9][col-9][0]
+                if bottom < row:
+                    bottom = row
+                if left > col:
+                    left =col
+                continue
+
+            if direction == "lft":
+                current = array[row][col-9][0]
+                if left > col:
+                    left =col
+                continue
+        
+        return top, left, bottom, right
+
+
+
+    def HogCheckDirection(self, array, row, col, imageH, imageW):
+        current = array[row][col][0]
+        direction = ""
+        tpl, tp, tpr, rt, btr, btm, btl, lft =0
+        if row -9>0 and col -9>0:
+            tpl = array[row -9][col-9][0]
+        if row - 9>0:
+            tp = array[row-9][col][0]
+        if row - 9>0 and col+9<imageW:
+            tpr = array[row-9][col+9][0]
+        if col+9<imageW:
+            rt = array[row][col+9][0]
+        if row +9>imageH and col +9>imageW:
+            btr = array[row -9][col-9][0]
+        if row + 9<imageH:
+            btm = array[row+9][col][0]
+        if row + 9<imageH and col-9>0:
+            btl = array[row-9][col+9][0]
+        if col-9<0:
+            lft = array[row][col-9][0]
+        
+        if tpl >= current:
+            direction = "tpl"
+            return direction
+        if tp >= current:
+            direction = "tp"
+            return direction
+        if tpr >= current:
+            direction = "tpr"
+            return direction
+        if rt>= current:
+            direction = "rt"
+            return direction
+        if btr >= current:
+            direction = "btr"
+            return direction
+        if btm >= current:
+            direction = "btm"
+            return direction
+        if btl >= current:
+            direction = "btl"
+            return direction
+        if lft>= current:
+            direction = "lft"
+            return direction
